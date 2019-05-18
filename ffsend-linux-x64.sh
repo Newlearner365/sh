@@ -14,4 +14,4 @@ echo -e "Congratulations, ffsend install completed!"
 
 echo
 echo "Welcome to visit:https://teddysun.com/357.html"
-echo "Enjoy it!"
+echo "Enjoy it!" 
