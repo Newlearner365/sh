@@ -241,7 +241,7 @@ echo -e "       snell 一键管理脚本
 		*)
 		echo "请输入正确数字 [0-7]"
 		;;
-	esac
+	esac 
 
 
 
