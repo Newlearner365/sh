@@ -13,5 +13,5 @@ mv ./ffsend /usr/local/bin/
 echo -e "Congratulations, ffsend install completed!"
 
 echo
-echo "Welcome to visit:https://teddysun.com/357.html"
+echo "Welcome to visit:https://www.newlearner.site"
 echo "Enjoy it!" 
