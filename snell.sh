@@ -190,7 +190,12 @@ Change_snell_info(){
 }
 
 Update_Shell(){
-	echo hhh
+	rm -rf /root/snell.sh
+	cd /root/
+	wget --no-check-certificate -O snell.sh https://raw.githubusercontent.com/Newlearner365/sh/master/snell.sh
+	chmod +x snell.sh
+	echo "snell.sh 已更新至最新版本"
+	./snell.sh
 }
 
 check_sys
