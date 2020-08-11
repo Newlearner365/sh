@@ -1,107 +1,60 @@
-// Custom pathname for the upstream website.
-const channel_name = 'newlearnerchannel'
-const host_name = 'channel.newlearner.workers.dev'
-const icon_url = 'https://www.newlearner.site/%E2%80%9Cwp-content/uploads%E2%80%9D/2019/01/2018-08-29-19.40.08.png'
+const origin = 'https://t.me/s/newlearnerchannel'
 
-const upstream_me = 't.me'
-const upstream_org = 'telegram.org'
-const upstream_path = '/s/' + channel_name
-// const cdn_name = 'cdn5.telesco.pe'
-const https = true
+const matcher = [
+  [/(https?:)?\/\/telegram\.org\/dl\/(.*?)/g, origin.replace("/s/", "/")],
+  [/(https?:)?\/\/telegram\.org\/(js|css|img)\/(.*?)/g, "/$2/$3"],
+  [/(['"])(https?:)?\/\/(\w+)\.telesco\.pe\/file\/(.*?)/g, "$1/file/$3/$4"]
+]
+const url_matcher = [
+  [/^\/(js|css|img|s|v)\//, url => {
+    url.host = "telegram.org"
+    return url
+  }],
+  [/^\/file\/(\w+)\/(.*?)$/, (url, re) => {
+    url.host = url.pathname.replace(re, "$1.telesco.pe")
+    url.pathname = url.pathname.replace(re, "/file/$2")
+    return url
+  }],
+  [/^\/$/, url => new URL(origin)],
+  [/^\/(?!(js|css|img|file|s|v)\/)/, url => {
+    url.host = "t.me"
+    return url
+  }]
+]
 
 addEventListener('fetch', event => {
-  event.respondWith(fetchAndApply(event.request))
+  event.respondWith(handle(event.request))
 })
 
-async function replace_response_text(response) {
-  let text = await response.text()
-  // replace View Img
-  let re2 = new RegExp('/img/tgme/eye(_2x)?.png', 'g')
-  text = text.replace(re2, '/static/img/tgme/eye_2x.png')
-  // replace channel link
-  let re1 = new RegExp('telegram.org/dl', 'g')
-  text = text.replace(re1, 't.me/' + channel_name)
-  // replace static file
-  let i = upstream_org.replace('.', '.')
-  let j = host_name + '/static'
-  let re = new RegExp(i, 'g')
-  text = text.replace(re, j)
-  // replace CDN
-  // let k = cdn_name.replace('.', '\.');
-  // let l = host_name + '/cdn';
-  // let re4 = new RegExp(k, 'g')
-  // text = text.replace(re4, l);
-  // replace icon
-  let re3 = new RegExp(
-    'data-content=\\\\".*?\\\\"><img src=\\\\".*?"><\\\\?/i>',
-    'g',
-  )
-  text = text.replace(
-    re3,
-    'class=\\"tgme_widget_message_user_photo bgcolor1\\" data-content=\\"i\\"><img src=\\"' +
-      icon_url +
-      '\\"></i>',
-  )
-  let re4 = new RegExp('data-content=".*?"><img src=".*?"><\\/i>', 'g')
-  text = text.replace(
-    re4,
-    'class="tgme_widget_message_user_photo bgcolor1" data-content="i"><img src="' +
-      icon_url +
-      '"></i>',
-  )
-  return text
-}
-
-async function fetchAndApply(request) {
-  let response = null
+async function handle(request) {
   let url = new URL(request.url)
-  let url_hostname = url.hostname
+  url.protocol = 'https:'
 
-  if (https == true) {
-    url.protocol = 'https:'
-  } else {
-    url.protocol = 'http:'
+  for ([re, cb] of url_matcher) {
+    if (re.exec(url.pathname)) {
+      url = cb(url, re)
+    }
   }
 
-  var upstream_domain = upstream_me
+  const headers = new Headers(request.headers)
+  headers.set('Host', url.hostname)
+  headers.set('Referer', url.hostname)
 
-  let pathname = url.pathname
-  console.log(pathname)
-  if (pathname.startsWith('/static')) {
-    upstream_domain = upstream_org
-    url.pathname = pathname.replace('/static', '')
-    // } else if(pathname.startsWith('/cdn')) {
-    //   upstream_domain = cdn_name;
-    //   url.pathname = pathname.replace('/cdn', '');
-  } else if (pathname == '/') {
-    url.pathname = upstream_path
-  } else {
-    url.pathname = upstream_path + url.pathname
-  }
-
-  url.host = upstream_domain
-
-  let method = request.method
-  let request_headers = request.headers
-  let new_request_headers = new Headers(request_headers)
-
-  new_request_headers.set('Host', url.hostname)
-  new_request_headers.set('Referer', url.hostname)
-  let original_response = await fetch(url.href, {
-    method: method,
-    headers: new_request_headers,
+  const resp = await fetch(url.href, {
+    method: request.method, headers
   })
 
-  let original_response_clone = original_response.clone()
-  const content_type = original_response.headers.get('content-type')
-  if (content_type.includes('text/') || content_type.includes('json')) {
-    let modified = await replace_response_text(original_response_clone)
-    // console.log(modified);
-    return new Response(modified, {
-      status: original_response.status,
-      headers: original_response.headers,
+  if (/text\/|json/.exec(resp.headers.get('content-type') || "")) {
+    let text = await resp.text()
+    for ([re, ret] of matcher) {
+      text = text.replaceAll(re, ret)
+    }
+
+    return new Response(text, {
+      status: resp.status,
+      headers: resp.headers,
     })
   } else {
-    return original_response
+    return resp
   }
 }
