@@ -3,10 +3,12 @@ const origin = 'https://t.me/s/newlearnerchannel'
 const matcher = [
   [/(https?:)?\/\/telegram\.org\/dl\/(.*?)/g, origin.replace("/s/", "/")],
   [/(https?:)?\/\/telegram\.org\/(js|css|img)\/(.*?)/g, "/$2/$3"],
-  [/(['"])(https?:)?\/\/(\w+)\.telesco\.pe\/file\/(.*?)/g, "$1/file/$3/$4"]
+  [/(['"])(https?:)?\/\/(\w+)\.telesco\.pe\/file\/(.*?)/g, "$1/file/$3/$4"],
+  [/\"\/s\/.*?(\?.*?)\"/g, "\"$1\""],
+  [/\\"\\\/s\\\/.*?(\?.*?)\\"/g, "\\\"$1\\\""]
 ]
 const url_matcher = [
-  [/^\/(js|css|img|s|v)\//, url => {
+  [/^\/(js|css|img|s)\//, url => {
     url.host = "telegram.org"
     return url
   }],
@@ -15,7 +17,13 @@ const url_matcher = [
     url.pathname = url.pathname.replace(re, "/file/$2")
     return url
   }],
-  [/^\/$/, url => new URL(origin)],
+  [/^\/$/, url => {
+    let new_url = new URL(origin);
+    if (url.search) {
+      new_url.search = url.search
+    }
+    return new_url
+  }],
   [/^\/(?!(js|css|img|file|s|v)\/)/, url => {
     url.host = "t.me"
     return url
